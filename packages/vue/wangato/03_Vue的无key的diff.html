@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    <!-- createApp -> runtime-dom index.ts -> createApp -->
+    <div id="app">
+        <h1>列表的展示</h1>
+        <div class="list">
+            <template v-for="item in names">
+                <div>{{ item }}</div>
+            </template>
+        </div>
+        <button @click="addName">添加name</button>
+    </div>
+    <script src="../dist/vue.global.js"></script>
+    <script>
+        const { reactive,createApp } = Vue
+        const App = {
+            setup() {
+                const names = reactive(["aaa","bbb","ccc"]) 
+
+                function addName(){
+                    names.push("111")
+                }
+                return {
+                    names,
+                    addName
+                }
+            }
+          
+        }
+        createApp(App).mount("#app")
+    </script>
+</body>
+</html>

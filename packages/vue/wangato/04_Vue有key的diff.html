@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    <!-- createApp -> runtime-dom index.ts -> createApp -->
+    <div id="app">
+        <div class="list">
+            <template v-for="item in letters" ::key="item">
+                <div>{{item}}</div>
+            </template>
+        </div>
+        <button @click="changeLetters">修改数组</button>
+    </div>
+    <script src="../dist/vue.global.js"></script>
+    <script>
+        const { createApp,ref } = Vue
+        const App = {
+            setup() {
+                const letters = ref(["a","b","c","d","e","f","g"])
+                const changeLetters = () => {
+                    letters.value = ["a","b","d","e","c","h","f","g"]
+                } 
+
+            
+                return {
+                    letters,
+                    changeLetters
+                }
+            }
+          
+        }
+        createApp(App).mount("#app")
+    </script>
+</body>
+</html>

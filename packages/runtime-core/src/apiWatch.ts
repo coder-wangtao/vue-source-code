@@ -144,7 +144,7 @@ export function watch<
 
 // overload: watching reactive object w/ cb
 export function watch<
-  T extends object,
+  T extends object, 
   Immediate extends Readonly<boolean> = false,
 >(
   source: T,
@@ -154,10 +154,11 @@ export function watch<
 
 // implementation
 export function watch<T = any, Immediate extends Readonly<boolean> = false>(
-  source: T | WatchSource<T>,
-  cb: any,
-  options?: WatchOptions<Immediate>,
+  source: T | WatchSource<T>, //监听的数据源
+  cb: any,  //回调函数
+  options?: WatchOptions<Immediate>,  //其他选项
 ): WatchStopHandle {
+  //dev环境判断
   if (__DEV__ && !isFunction(cb)) {
     warn(
       `\`watch(fn, options?)\` signature has been moved to a separate API. ` +
@@ -165,6 +166,7 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
         `supports \`watch(source, cb, options?) signature.`,
     )
   }
+  //本质上调用doWatch
   return doWatch(source as any, cb, options)
 }
 
@@ -180,6 +182,9 @@ function doWatch(
     onTrigger,
   }: WatchOptions = EMPTY_OBJ,
 ): WatchStopHandle {
+  //对options中的once的处理
+  //once表示只执行一次，执行完就调用unwatch停止监听
+
   if (cb && once) {
     const _cb = cb
     cb = (...args) => {
@@ -226,21 +231,27 @@ function doWatch(
     )
   }
 
+  //获取当前组件的实例，用于错误处理和调试
   const instance = currentInstance
+  //获取reactive的getter函数，如果deep为true的情况，那么会深度遍历每一个getter
+  //也就是每一个getter都会收集cb的依赖
   const reactiveGetter = (source: object) =>
     deep === true
       ? source // traverse will happen in wrapped getter below
       : // for deep: false, only traverse root-level properties
+      //遍历对象中的每一个属性来监听
         traverse(source, deep === false ? 1 : undefined)
 
   let getter: () => any
   let forceTrigger = false
   let isMultiSource = false
 
+  //根据source类型，获取getter
   if (isRef(source)) {
     getter = () => source.value
     forceTrigger = isShallow(source)
   } else if (isReactive(source)) {
+    //reactive类就使用reactiveGetter
     getter = () => reactiveGetter(source)
     forceTrigger = true
   } else if (isArray(source)) {
@@ -265,6 +276,8 @@ function doWatch(
         callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
     } else {
       // no cb -> simple effect
+      //watchEffect的情况
+      //那么就意味着，当数据发生变化时，执行getter就可以了
       getter = () => {
         if (cleanup) {
           cleanup()
@@ -297,11 +310,14 @@ function doWatch(
     }
   }
 
+  //是否是深度监听，deep为true
   if (cb && deep) {
     const baseGetter = getter
+    //getter会被包装，在获取值的同时对整个对象进行深度遍历，包装每个属性都可以被监听到
     getter = () => traverse(baseGetter())
   }
 
+  //清理函数，我们可以在cb的第三个参数传入这个参数（newVal,oldVal,onCleanup）{}
   let cleanup: (() => void) | undefined
   let onCleanup: OnCleanup = (fn: () => void) => {
     cleanup = effect.onStop = () => {
@@ -336,12 +352,18 @@ function doWatch(
   let oldValue: any = isMultiSource
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
+  
+  //创建一个调度器的job
   const job: SchedulerJob = () => {
+    //不是激活状态，或者不是脏的（依赖的数据没有发行变化），那么直接返回
     if (!effect.active || !effect.dirty) {
       return
     }
+
+    //cb有值，那么是watch，没有值，那么就是watchEffect
     if (cb) {
       // watch(source, cb)
+      //执行effect.run(),获取它的新值
       const newValue = effect.run()
       if (
         deep ||
@@ -354,9 +376,11 @@ function doWatch(
           isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
       ) {
         // cleanup before running cb again
+        //是否注册了cleanup函数，注册了那么就会执行
         if (cleanup) {
           cleanup()
         }
+        //调用callWithAsyncErrorHandling来执行cb函数
         callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
           newValue,
           // pass undefined as the old value when it's changed for the first time
@@ -371,6 +395,7 @@ function doWatch(
       }
     } else {
       // watchEffect
+      //没有传入cb，那么就是watchEffect
       effect.run()
     }
   }
@@ -379,19 +404,32 @@ function doWatch(
   // it is allowed to self-trigger (#1727)
   job.allowRecurse = !!cb
 
+  //调度的scheduler，会根据我们传入的flush决定在什么时候调度
   let scheduler: EffectScheduler
-  if (flush === 'sync') {
+
+  if (flush === 'sync') { 
+    //同步
     scheduler = job as any // the scheduler function gets called directly
-  } else if (flush === 'post') {
+  } else if (flush === 'post') { //渲染后
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   } else {
+    //渲染前
     // default: 'pre'
     job.pre = true
     if (instance) job.id = instance.uid
     scheduler = () => queueJob(job)
   }
 
+  //创建一个ReactiveEffect对象，并且传入getter(fn)
+  //scheduler是谁？scheduler就是要执行的job
+  //但是scheduler的执行时机和我们的flush设置有关系
   const effect = new ReactiveEffect(getter, NOOP, scheduler)
+
+  //1 依赖发生变化时，执行scheduler
+  //2 scheduler可以根据不同的时机执行effect.run()和cb
+  //3 effect.run()中本质上执行的是getter获取到新的value
+  //4 执行cb时，会使用getter的返回值，传入cb中
+
 
   const scope = getCurrentScope()
   const unwatch = () => {
@@ -407,10 +445,13 @@ function doWatch(
   }
 
   // initial run
+  //初次运行cb
   if (cb) {
+    //如果是立即执行，那么执行job，就会执行cb
     if (immediate) {
       job()
     } else {
+      //执行一次run,这样可以收集依赖
       oldValue = effect.run()
     }
   } else if (flush === 'post') {
@@ -419,6 +460,7 @@ function doWatch(
       instance && instance.suspense,
     )
   } else {
+    //watchEffect执行的操作
     effect.run()
   }
 

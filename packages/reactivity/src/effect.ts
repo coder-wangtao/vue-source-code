@@ -35,6 +35,7 @@ export class ReactiveEffect<T = any> {
    */
   computed?: ComputedRefImpl<T>
   /**
+   * 
    * @internal
    */
   allowRecurse?: boolean

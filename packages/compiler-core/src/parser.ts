@@ -1026,10 +1026,14 @@ function reset() {
 }
 
 export function baseParse(input: string, options?: ParserOptions): RootNode {
+  // 重置一些解析器的状态
   reset()
+  //保存当前要解析的模板字符串
   currentInput = input
+  //解析的选项
   currentOptions = extend({}, defaultParserOptions)
 
+  //合并传入的解析选项
   if (options) {
     let key: keyof ParserOptions
     for (key in options) {
@@ -1053,6 +1057,7 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
     }
   }
 
+  //设置解析模式：html/sfc/base
   tokenizer.mode =
     currentOptions.parseMode === 'html'
       ? ParseMode.HTML
@@ -1060,6 +1065,7 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
         ? ParseMode.SFC
         : ParseMode.BASE
 
+  //命名空间SVG/MathMl
   tokenizer.inXML =
     currentOptions.ns === Namespaces.SVG ||
     currentOptions.ns === Namespaces.MATH_ML
@@ -1070,9 +1076,13 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
     tokenizer.delimiterClose = toCharCodes(delimiters[1])
   }
 
+  //创建空的根节点：RootNode
   const root = (currentRoot = createRoot([], input))
+  //调用parse开始解析 开始解析模板字符串
   tokenizer.parse(currentInput)
+  // 给根节点设置位置信息
   root.loc = getLoc(0, input.length)
+  //压缩一些空格字符串
   root.children = condenseWhitespace(root.children)
   currentRoot = null
   return root

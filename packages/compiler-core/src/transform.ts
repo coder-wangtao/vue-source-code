@@ -321,15 +321,20 @@ export function createTransformContext(
 }
 
 export function transform(root: RootNode, options: TransformOptions) {
+  //创建一个转化的上下文，转化过程一种数据结构
   const context = createTransformContext(root, options)
+  //递归遍历AST树，从根节点开始返回每一个子节点（开始转换了）
   traverseNode(root, context)
+  //静态提升（优化性能，不用每次调用render执行一次）
   if (options.hoistStatic) {
     hoistStatic(root, context)
   }
   if (!options.ssr) {
+    //创建一个根节点的代码生成器
     createRootCodegen(root, context)
   }
   // finalize meta information
+  //转化后会收集和整理整个转化过程中生成的一些元信息（meta information),而且都放到root上
   root.helpers = new Set([...context.helpers.keys()])
   root.components = [...context.components]
   root.directives = [...context.directives]
@@ -417,10 +422,13 @@ export function traverseNode(
   node: RootNode | TemplateChildNode,
   context: TransformContext,
 ) {
+  //设置当前节点为正在转化的节点
   context.currentNode = node
   // apply transform plugins
+  //获取节点转化函数
   const { nodeTransforms } = context
   const exitFns = []
+  //遍历nodeTransforms,对当前节点应用所有的转化函数
   for (let i = 0; i < nodeTransforms.length; i++) {
     const onExit = nodeTransforms[i](node, context)
     if (onExit) {
@@ -439,6 +447,7 @@ export function traverseNode(
     }
   }
 
+  //处理不同的节点类型
   switch (node.type) {
     case NodeTypes.COMMENT:
       if (!context.ssr) {
@@ -469,6 +478,7 @@ export function traverseNode(
   }
 
   // exit transforms
+  //完成转换后执行以下exitFans
   context.currentNode = node
   let i = exitFns.length
   while (i--) {

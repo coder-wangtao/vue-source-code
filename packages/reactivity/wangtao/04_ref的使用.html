@@ -6,27 +6,23 @@
     <title>Document</title>
 </head>
 <body>
-    <h1 id="title"></h1>
+    <h1 id="counter"></h1>
     <script src="../dist/reactivity.global.js"></script>
     <script>
-        const { reactive,effect } = VueReactivity
-        const info = reactive({
-            name:"王小波",
-            age:18
-        })
+        const { ref,effect } = VueReactivity
+        //counter本质上是一个RefImpl创建的实例对象  
+        const counter = ref(0)
 
-        const titleH1 = document.querySelector("#title")
+        const counterH1 = document.querySelector("#counter")
+
         effect(() => {
-            titleH1.innerHTML = info.name
+            debugger
+            counterH1.innerHTML = counter.value
         })
-
 
         setTimeout(() => {
-            debugger
-            info.name = "李银河"
+            counter.value = 999
         }, 2000);
-
-
     </script>
 </body>
 </html>

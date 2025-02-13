@@ -284,6 +284,7 @@ export function generate(
     onContextCreated?: (context: CodegenContext) => void
   } = {},
 ): CodegenResult {
+  //创建一个代码生成的上下文
   const context = createCodegenContext(ast, options)
   if (options.onContextCreated) options.onContextCreated(context)
   const {
@@ -305,7 +306,7 @@ export function generate(
 
   // preambles
   // in setup() inline mode, the preamble is generated in a sub context
-  // and returned separately.
+  // and returned separately
   const preambleContext = isSetupInlined
     ? createCodegenContext(ast, options)
     : context
@@ -315,6 +316,7 @@ export function generate(
     genFunctionPreamble(ast, preambleContext)
   }
   // enter render function
+  //函数信息签名生成
   const functionName = ssr ? `ssrRender` : `render`
   const args = ssr ? ['_ctx', '_push', '_parent', '_attrs'] : ['_ctx', '_cache']
   if (!__BROWSER__ && options.bindingMetadata && !options.inline) {

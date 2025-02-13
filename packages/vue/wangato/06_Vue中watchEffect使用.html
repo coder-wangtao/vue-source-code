@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script src="../dist/vue.global.js"></script>
+    <script>
+        const { watch,ref }= Vue
+        const name = ref("王小波")
+        
+        watch(() => {
+            console.log(`我的名字是${name.value}`)
+        })
+
+        setTimeout(() => {
+            name.value = "李银河"
+        },3000)
+    </script>
+</body>
+</html>

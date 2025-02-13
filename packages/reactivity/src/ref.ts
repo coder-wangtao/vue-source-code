@@ -46,13 +46,17 @@ type RefBase<T> = {
 }
 
 export function trackRefValue(ref: RefBase<any>) {
+  //判断是否需要收集依赖
+  //activeEffect是一个全局变量，代表副作用的对象，是ReactiveEffect类型
   if (shouldTrack && activeEffect) {
     ref = toRaw(ref)
+    // 我们这里会发现，单传ref来说，它只需要保存自己的dep即可
     trackEffect(
       activeEffect,
       (ref.dep ??= createDep(
-        () => (ref.dep = undefined),
-        ref instanceof ComputedRefImpl ? ref : undefined,
+        //第一次创建ref的dep对象
+        () => (ref.dep = undefined), //传入清理函数，直接将dep设置为undefined
+        ref instanceof ComputedRefImpl ? ref : undefined, //根据类型判断是否是计算属性
       )),
       __DEV__
         ? {
@@ -71,9 +75,13 @@ export function triggerRefValue(
   newVal?: any,
   oldVal?: any,
 ) {
+  //转化成原始对象（确保后续使用的是原始对象，不是某个包装过的响应式对象）
   ref = toRaw(ref)
+  //获取dep
   const dep = ref.dep
+  //依赖有值
   if (dep) {
+    //触发依赖更新
     triggerEffects(
       dep,
       dirtyLevel,
@@ -111,6 +119,7 @@ export function isRef(r: any): r is Ref {
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
+  //本质上是去调用createRef,并且第二个参数shallow(浅的)设置为false
   return createRef(value, false)
 }
 
@@ -148,9 +157,11 @@ export function shallowRef(value?: unknown) {
 }
 
 function createRef(rawValue: unknown, shallow: boolean) {
+  // 判断传入的值已经是ref,那么直接返回
   if (isRef(rawValue)) {
     return rawValue
   }
+  //如果不是ref,那么就会创建一个RefImpl的对象
   return new RefImpl(rawValue, shallow)
 }
 
@@ -158,6 +169,7 @@ class RefImpl<T> {
   private _value: T
   private _rawValue: T
 
+  //用于存储依赖的副作用函数，是一个Map类型
   public dep?: Dep = undefined
   public readonly __v_isRef = true
 
@@ -165,23 +177,35 @@ class RefImpl<T> {
     value: T,
     public readonly __v_isShallow: boolean,
   ) {
+    // 保留原始value值在_rawValue
     this._rawValue = __v_isShallow ? value : toRaw(value)
+    // 如果value是一个对象，那么会调用toReactive,所以本质上ref(对象)实际上调用的还是reactive(对象)
     this._value = __v_isShallow ? value : toReactive(value)
   }
 
+  //访问value的值
   get value() {
+    //使用这个ref的value时，那么就收集依赖
     trackRefValue(this)
     return this._value
   }
 
+  //修改value值
   set value(newVal) {
+    // 判断是否需要对新值进一步处理
     const useDirectValue =
       this.__v_isShallow || isShallow(newVal) || isReadonly(newVal)
     newVal = useDirectValue ? newVal : toRaw(newVal)
+    //查看新值和旧值有没有发生改变，有改变才会触发依赖（性能优化）
     if (hasChanged(newVal, this._rawValue)) {
+      //原来的值保存一下在oldValue
       const oldVal = this._rawValue
+      // _rawValue属性保存新值
       this._rawValue = newVal
+      //判断是否需要转换成响应式对象
+      //ref({}) -> ref.value = {}
       this._value = useDirectValue ? newVal : toReactive(newVal)
+      //触发依赖更新
       triggerRefValue(this, DirtyLevels.Dirty, newVal, oldVal)
     }
   }

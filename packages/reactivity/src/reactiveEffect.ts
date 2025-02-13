@@ -48,6 +48,7 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
     if (!depsMap) {
       targetMap.set(target, (depsMap = new Map()))
     }
+
     //根据key去获取对应的依赖，dep的本质是另一个Map对象
     let dep = depsMap.get(key)
     //没有对应的依赖，那么就会添加依赖
@@ -102,7 +103,8 @@ export function trigger(
     // collection being cleared
     // trigger all effects for target
     deps = [...depsMap.values()]
-  } else if (key === 'length' && isArray(target)) { //r如果修改的是数组的length
+  } else if (key === 'length' && isArray(target)) {
+    //r如果修改的是数组的length
     //遍历depsMap,将key为length，并且大于newLength的添加到deps中
     //因为直接设置长度变小的话，那么后续的元素会被移除，那么它就需要更新依赖了
     const newLength = Number(newValue)
@@ -112,7 +114,6 @@ export function trigger(
       }
     })
   } else {
-
     //其他忽略，这个最重要
     //对于set/add/delete类型的操作，将指定的key相关的依赖添加deps
     // schedule runs for SET | ADD | DELETE

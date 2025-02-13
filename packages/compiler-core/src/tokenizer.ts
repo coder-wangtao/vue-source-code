@@ -918,103 +918,109 @@ export default class Tokenizer {
    * States that are more likely to be hit are higher up, as a performance improvement.
    */
   public parse(input: string) {
+    //总览：整体就是遍历每一个字符进行词法分析和语法分析（包括状态机的设计，switch每个case处理当前状态下的输入字符）
+
+    //使用buffer保存要解析的输入字符串
     this.buffer = input
+    //使用while循环，一个个字符扫描输入的字符串，从index开始解析，当前解析的字符串的位置
     while (this.index < this.buffer.length) {
+      // 每次虚幻读取当前字符的Unicode值，保存在c中
       const c = this.buffer.charCodeAt(this.index)
+      //判断是不是一个换行符
       if (c === CharCodes.NewLine) {
         this.newlines.push(this.index)
       }
       switch (this.state) {
         case State.Text: {
-          this.stateText(c)
+          this.stateText(c) //文本解析
           break
         }
-        case State.InterpolationOpen: {
+        case State.InterpolationOpen: { //插值表达式的开始
           this.stateInterpolationOpen(c)
           break
         }
-        case State.Interpolation: {
+        case State.Interpolation: {  //插值表达式
           this.stateInterpolation(c)
           break
         }
         case State.InterpolationClose: {
-          this.stateInterpolationClose(c)
+          this.stateInterpolationClose(c)//插值表达式的结尾
           break
         }
         case State.SpecialStartSequence: {
-          this.stateSpecialStartSequence(c)
+          this.stateSpecialStartSequence(c) // 特殊开始序列
           break
         }
         case State.InRCDATA: {
-          this.stateInRCDATA(c)
+          this.stateInRCDATA(c)  // 在RCDATA(可解析字符数据)中
           break
         }
         case State.CDATASequence: {
-          this.stateCDATASequence(c)
+          this.stateCDATASequence(c)  //CDATA 序列
           break
         }
         case State.InAttrValueDq: {
-          this.stateInAttrValueDoubleQuotes(c)
+          this.stateInAttrValueDoubleQuotes(c)  //在双引号内的属性值
           break
         }
         case State.InAttrName: {
-          this.stateInAttrName(c)
+          this.stateInAttrName(c)  //在属性名称中
           break
         }
         case State.InDirName: {
-          this.stateInDirName(c)
+          this.stateInDirName(c) //在指令名称中 
           break
         }
         case State.InDirArg: {
-          this.stateInDirArg(c)
+          this.stateInDirArg(c) //在指令参数中 
           break
         }
         case State.InDirDynamicArg: {
-          this.stateInDynamicDirArg(c)
+          this.stateInDynamicDirArg(c)  //在动态指令参数中 
           break
         }
         case State.InDirModifier: {
-          this.stateInDirModifier(c)
+          this.stateInDirModifier(c) //在指令修饰符中
           break
         }
         case State.InCommentLike: {
-          this.stateInCommentLike(c)
+          this.stateInCommentLike(c) //在类似注释的内容中
           break
         }
         case State.InSpecialComment: {
-          this.stateInSpecialComment(c)
+          this.stateInSpecialComment(c) //在特殊注释中
           break
         }
         case State.BeforeAttrName: {
-          this.stateBeforeAttrName(c)
+          this.stateBeforeAttrName(c) //属性名称之前
           break
         }
         case State.InTagName: {
-          this.stateInTagName(c)
+          this.stateInTagName(c) //在标签名称之前
           break
         }
         case State.InSFCRootTagName: {
-          this.stateInSFCRootTagName(c)
+          this.stateInSFCRootTagName(c) //在单文件组件根标签名称中
           break
         }
         case State.InClosingTagName: {
-          this.stateInClosingTagName(c)
+          this.stateInClosingTagName(c) //在结束标签名称中
           break
         }
         case State.BeforeTagName: {
-          this.stateBeforeTagName(c)
+          this.stateBeforeTagName(c)  //标签名称之前
           break
         }
         case State.AfterAttrName: {
-          this.stateAfterAttrName(c)
+          this.stateAfterAttrName(c)  //属性名称之后
           break
         }
         case State.InAttrValueSq: {
-          this.stateInAttrValueSingleQuotes(c)
+          this.stateInAttrValueSingleQuotes(c)  //在单引号内的属性值
           break
         }
         case State.BeforeAttrValue: {
-          this.stateBeforeAttrValue(c)
+          this.stateBeforeAttrValue(c)  //属性值之前
           break
         }
         case State.BeforeClosingTagName: {

@@ -53,9 +53,13 @@ export class ComputedRefImpl<T> {
     isReadonly: boolean,
     isSSR: boolean,
   ) {
+    //创建一个ReactiveEffect对象，只是我们的fn本质上是getter函数
     this.effect = new ReactiveEffect(
-      () => getter(this._value),
+      () => getter(this._value), //fn函数：函数通过一个箭头函数调用getter并且把之前的值传过去
       () =>
+        //trigger 而不是调度 ()
+        //当计算属性引来的值发生变化时，就i会重新触发triggerRefValue
+        //比如computed(()=> this.firstName+this.lastName) firstName发生改变
         triggerRefValue(
           this,
           this.effect._dirtyLevel === DirtyLevels.MaybeDirty_ComputedSideEffect
@@ -63,14 +67,22 @@ export class ComputedRefImpl<T> {
             : DirtyLevels.MaybeDirty,
         ),
     )
+    //this.effect记录computed属性
     this.effect.computed = this
-    this.effect.active = this._cacheable = !isSSR
+    //非SSR环境，时active的。并且是缓存的
+    this.effect.active = this._cacheable = !isSSR  //ssr
+    // 记录是否readonly
     this[ReactiveFlags.IS_READONLY] = isReadonly
   }
 
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
+    //转化成原始值，确保不是操作的代理对象
     const self = toRaw(this)
+    //如果计算属性发生了变化，相关的副作用函数就要重新执行
+    //dirty表示脏的，脏的会执行一次，执行完了一次，不变成不脏的，不会再次执行
+    //当依赖有修改，又会变成脏的
+    //fullname.value + fullname.value run方法不会执行两次
     if (
       (!self._cacheable || self.effect.dirty) &&
       hasChanged(self._value, (self._value = self.effect.run()!))
@@ -143,27 +155,36 @@ export function computed<T>(
   options: WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions,
 ): WritableComputedRef<T>
+
 export function computed<T>(
+  //getterOrOptions可以是一个函数，也可以是一个包含get 和 set方法的对象
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions,
   isSSR = false,
 ) {
   let getter: ComputedGetter<T>
   let setter: ComputedSetter<T>
-
+  //getterOrOptions可以传入两种形式
+  //对象：{ get: function(){}, set: function(newValue){} }
+  //函数：() => {} effect
   const onlyGetter = isFunction(getterOrOptions)
+  //只有getter并且是一个函数
   if (onlyGetter) {
+    //直接getterOrOptions复制给getter即可
     getter = getterOrOptions
+    //这个时候调用setter发出警告
     setter = __DEV__
       ? () => {
           warn('Write operation failed: computed value is readonly')
         }
       : NOOP
   } else {
+    //else就是对象，然后取出get/set
     getter = getterOrOptions.get
     setter = getterOrOptions.set
   }
 
+  //创建一个ComputedRefImpl对象，待会返回出去
   const cRef = new ComputedRefImpl(getter, setter, onlyGetter || !setter, isSSR)
 
   if (__DEV__ && debugOptions && !isSSR) {

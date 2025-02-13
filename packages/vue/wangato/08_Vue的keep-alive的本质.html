@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="app"></div>
+    <script src="../dist/vue.global.js"></script>
+    <script>
+        const { ref,createApp,nextTick } = Vue
+
+        const Home = {
+            template:`<h2 @click="counter++">Home: {{ counter }}</h2>`,
+            setup() {
+                const counter = ref(0)
+                return {
+                    counter
+                }
+            }
+        }
+
+        const About = {
+            template: `<h2>About</h2>`
+        }
+
+        const App = {
+            template: `<h1>KeepAlive切换</h1>
+            <button @click="changPage">切换</button>
+            <keep-alive>
+                <Home v-if="isHome"/>
+                <About v-else />
+            </keep-alive>
+            `,
+            components:{
+                Home,
+                About
+            },
+            setup(){
+                const isHome = ref(true)
+                const changPage = () => {
+                    isHome.value = !isHome.value
+                }
+                return {
+                    isHome,
+                    changPage
+                }
+            }
+        }
+        createApp(App).mount("#app")
+
+    </script>
+</body>
+</html>

@@ -11,19 +11,19 @@
     <script>
         const { reactive,effect } = VueReactivity
         const info = reactive({
-            name:"王小波",
-            age:18
+            isNick:true,
+            name:"why",
+            nickname:"coderwhy"
         })
 
         const titleH1 = document.querySelector("#title")
         effect(() => {
-            titleH1.innerHTML = info.name
+            titleH1.innerHTML = info.isNick ? info.nickname : info.name
         })
 
 
         setTimeout(() => {
-            debugger
-            info.name = "李银河"
+            info.isNick = !info.isNick
         }, 2000);
 
 

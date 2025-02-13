@@ -41,6 +41,7 @@ export function compile(
   src: string | RootNode,
   options: CompilerOptions = {},
 ): CodegenResult {
+  //底层是调用baseCompile来实现编译过程
   return baseCompile(
     src,
     extend({}, parserOptions, options, {
@@ -48,10 +49,12 @@ export function compile(
         // ignore <script> and <tag>
         // this is not put inside DOMNodeTransforms because that list is used
         // by compiler-ssr to generate vnode fallback branches
+        //忽略具有副作用的标签，列如<script> 和 <style>
         ignoreSideEffectTags,
         ...DOMNodeTransforms,
         ...(options.nodeTransforms || []),
       ],
+      //针对指令的转化
       directiveTransforms: extend(
         {},
         DOMDirectiveTransforms,

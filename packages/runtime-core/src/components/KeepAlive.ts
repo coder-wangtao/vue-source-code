@@ -90,16 +90,19 @@ const KeepAliveImpl: ComponentOptions = {
   },
 
   setup(props: KeepAliveProps, { slots }: SetupContext) {
+    //获取组件实例
     const instance = getCurrentInstance()!
     // KeepAlive communicates with the instantiated renderer via the
     // ctx where the renderer passes in its internals,
     // and the KeepAlive instance exposes activate/deactivate implementations.
     // The whole point of this is to avoid importing KeepAlive directly in the
     // renderer to facilitate tree-shaking.
+    //获取上下文对象，有了上下文对象后，我们可以通过内部的renderer来控制子组件的激活和停用
     const sharedContext = instance.ctx as KeepAliveContext
 
     // if the internal renderer is not registered, it indicates that this is server-side rendering,
     // for KeepAlive, we just need to render its children
+    //处理ssr
     if (__SSR__ && !sharedContext.renderer) {
       return () => {
         const children = slots.default && slots.default()
@@ -107,8 +110,11 @@ const KeepAliveImpl: ComponentOptions = {
       }
     }
 
+    //cache用于缓存VNode,每个VNode对应一个cacheKey
     const cache: Cache = new Map()
+    //记录VNode的顺序，在缓存达到上限时，确定哪些VNode需要被移除（lRU算法）
     const keys: Keys = new Set()
+    //保存当前激活的VNode,也就是正在显示的组件VNode
     let current: VNode | null = null
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
@@ -117,6 +123,7 @@ const KeepAliveImpl: ComponentOptions = {
 
     const parentSuspense = instance.suspense
 
+    //获取渲染器中的操作
     const {
       renderer: {
         p: patch,
@@ -125,8 +132,11 @@ const KeepAliveImpl: ComponentOptions = {
         o: { createElement },
       },
     } = sharedContext
+
+    //缓存元素
     const storageContainer = createElement('div')
 
+    //当KeepAlive组件需要激活某个子组件时，就调用这个方法
     sharedContext.activate = (
       vnode,
       container,
@@ -165,13 +175,17 @@ const KeepAliveImpl: ComponentOptions = {
       }
     }
 
+    //当KeepAlive组件，将组件移动到存储容器中，就调用这个方法
     sharedContext.deactivate = (vnode: VNode) => {
+      //获取当前vnode的组件实例(Vnode上有一个对组件实例的引用)
       const instance = vnode.component!
+      //将一些钩子变成无效的 onMounted/ACTIVATED
       invalidateMount(instance.m)
       invalidateMount(instance.a)
-
+      //将组件移动到storageContainer上面
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
+        //执行 deactivated钩子
         if (instance.da) {
           invokeArrayFns(instance.da)
         }
@@ -194,6 +208,7 @@ const KeepAliveImpl: ComponentOptions = {
       _unmount(vnode, instance, parentSuspense, true)
     }
 
+    //根据体哦阿健裁剪缓存：include/exclude
     function pruneCache(filter?: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
         const name = getComponentName(vnode.type as ConcreteComponent)
@@ -203,6 +218,7 @@ const KeepAliveImpl: ComponentOptions = {
       })
     }
 
+    //删除缓存的key的操作(根据key)
     function pruneCacheEntry(key: CacheKey) {
       const cached = cache.get(key) as VNode
       if (!current || !isSameVNodeType(cached, current)) {
@@ -216,6 +232,7 @@ const KeepAliveImpl: ComponentOptions = {
       keys.delete(key)
     }
 
+    //include exclude
     // prune cache on include/exclude prop change
     watch(
       () => [props.include, props.exclude],
@@ -229,6 +246,7 @@ const KeepAliveImpl: ComponentOptions = {
 
     // cache sub tree after render
     let pendingCacheKey: CacheKey | null = null
+    //缓存keep-alive中的组件
     const cacheSubtree = () => {
       // fix #1621, the pendingCacheKey could be 0
       if (pendingCacheKey != null) {
@@ -239,6 +257,7 @@ const KeepAliveImpl: ComponentOptions = {
             cache.set(pendingCacheKey!, getInnerChild(instance.subTree))
           }, instance.subTree.suspense)
         } else {
+          //将pendingCacheKey作为key,subTree缓存下来
           cache.set(pendingCacheKey, getInnerChild(instance.subTree))
         }
       }
@@ -263,12 +282,14 @@ const KeepAliveImpl: ComponentOptions = {
     })
 
     return () => {
+      //render函数
       pendingCacheKey = null
 
       if (!slots.default) {
         return null
       }
 
+      //从插槽中获取组件（keep-alive中的组件时作为它 的插槽插入的children）
       const children = slots.default()
       const rawVNode = children[0]
       if (children.length > 1) {
@@ -286,11 +307,13 @@ const KeepAliveImpl: ComponentOptions = {
         return rawVNode
       }
 
+      //获取组件
       let vnode = getInnerChild(rawVNode)
       const comp = vnode.type as ConcreteComponent
 
       // for async components, name check should be based in its loaded
       // inner component if available
+      //获取组件的名称
       const name = getComponentName(
         isAsyncWrapper(vnode)
           ? (vnode.type as ComponentOptions).__asyncResolved || {}
@@ -341,6 +364,8 @@ const KeepAliveImpl: ComponentOptions = {
         keys.add(key)
         // prune oldest entry
         if (max && keys.size > parseInt(max as string, 10)) {
+          //keys.value().next()返回迭代器中的第一个值.value，也就是最早的值了
+          //他就是利用Set实现了一个lRU算法(最近最少使用算法),很简单
           pruneCacheEntry(keys.values().next().value)
         }
       }

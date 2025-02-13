@@ -66,9 +66,12 @@ export function baseCompile(
   source: string | RootNode,
   options: CompilerOptions = {},
 ): CodegenResult {
+  //设置错误处理的函数
   const onError = options.onError || defaultOnError
+  // 减产一下是不是模块模式
   const isModuleMode = options.mode === 'module'
   /* istanbul ignore if */
+  //检查一下在浏览器模式下有没有启动不支持的功能，有的话直接抛出错误
   if (__BROWSER__) {
     if (options.prefixIdentifiers === true) {
       onError(createCompilerError(ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED))
@@ -77,6 +80,7 @@ export function baseCompile(
     }
   }
 
+  //前缀标识符的一些东西
   const prefixIdentifiers =
     !__BROWSER__ && (options.prefixIdentifiers === true || isModuleMode)
   if (!prefixIdentifiers && options.cacheHandlers) {
@@ -89,10 +93,14 @@ export function baseCompile(
   const resolvedOptions = extend({}, options, {
     prefixIdentifiers,
   })
+
+  //如果是字符串，调用baseParse转化成ast树，否则直接返回 （parse）
   const ast = isString(source) ? baseParse(source, resolvedOptions) : source
+  //nodeTransforms 获取处理AST节点的转换函数
+  //directiveTransforms 获取：处理指令的转换函数
   const [nodeTransforms, directiveTransforms] =
     getBaseTransformPreset(prefixIdentifiers)
-
+  //ts的支持
   if (!__BROWSER__ && options.isTS) {
     const { expressionPlugins } = options
     if (!expressionPlugins || !expressionPlugins.includes('typescript')) {
@@ -100,6 +108,7 @@ export function baseCompile(
     }
   }
 
+  //ast转换：调用transform函数，对解析得到的AST进行转换 （transform）
   transform(
     ast,
     extend({}, resolvedOptions, {
@@ -115,5 +124,6 @@ export function baseCompile(
     }),
   )
 
+  //生成代码：调用generate函数，将转化后的AST转化成目标代码的字符串  (generate)
   return generate(ast, resolvedOptions)
 }

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1 id="name"></h1>
+    <script src="../dist/reactivity.global.js"></script>
+    <script>
+        const { computed,effect,ref } = VueReactivity
+        //counter本质上是一个RefImpl创建的实例对象  
+        // firstName = ref("Kobe") dep1：{effect2}
+        const firstName = ref("Kobe")
+        // lastName = ref("Byrant") dep2: {effect2}
+        const lastName = ref("Byrant")
+        debugger
+        //fullName的computed对象中的dep 收集effect1
+        const fullName = computed(() => {
+            //fn2 => effect2
+            console.log("computed的getter执行")
+            return firstName.value + " " + lastName.value
+        })
+
+        const nameH1 = document.querySelector("#name")
+
+        effect(() => {
+            //fn1 => effect1
+            debugger
+            nameH1.innerHTML = fullName.value + "<br/>" + fullName.value
+        })
+
+        // setTimeout(() => {
+        //     firstName.value = "weiping"
+        // }, 2000);
+    </script>
+</body>
+</html>
